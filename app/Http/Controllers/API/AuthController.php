@@ -61,24 +61,33 @@ class AuthController extends Controller
     // }
 
 
-    public function promoteToHR(Request $request, $userId)
+    public function promoteToHR($userId)
     {
+        try {
+            $user = User::find($userId);
 
-        if (auth()->user()->role !== 'superadmin') {
-            return response()->json(['message' => 'Yetkiniz yok!'], 403);
+            // Authenticatied user
+            $authUser = auth()->user();
+
+            // Superadmin rolü kontrolü
+            if (!$authUser || !$authUser->hasRole('superadmin')) {
+                return response()->json(['error' => 'Only superadmin can promote users to HR.'], 403);
+            }
+
+            // Kullanıcıyı HR rolüne terfi ettir
+            if ($user) {
+                $user->assignRole('hr');
+                return response()->json(['message' => 'User promoted to HR successfully.'], 200);
+            } else {
+                return response()->json(['error' => 'User not found.'], 404);
+            }
+        } catch (Exception $e) {
+            return response()->json(['error' => 'Internal Server Error'], 500);
         }
-
-
-        $user = User::find($userId);
-
-
-        if ($user) {
-            $user->update(['role' => 'hr']);
-            return response()->json(['message' => 'User promoted to HR successfully!']);
-        }
-
-        return response()->json(['message' => 'User not found!'], 404);
     }
+
+
+
 
     public function register(Request $request)
     {
@@ -109,17 +118,22 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'email' => ['Geçersiz e-posta veya şifre.'],
             ]);
         }
-        if ($user->role === 'employee' || $user->role === 'hr') {
-            $token = $user->createToken('auth_token')->plainTextToken;
-            return response()->json(['token' => $token]);
-        }
 
-        return response()->json(['message' => 'Unauthorized role.'], 403);
+        // Spatie/Permission kullanıyorsanız:
+        // if (!$user->hasRole(['employee', 'hr', 'superadmin'])) {
+        //     return response()->json(['message' => 'Yetkisiz rol.'], 403);
+        // }
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ]);
     }
-
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();
@@ -128,5 +142,17 @@ class AuthController extends Controller
             'message' => 'Logged out successfully',
             'data' => []
         ], 200);
+    }
+
+    public function getUserInfo (Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'User info',
+            'data' => $user
+        ], 200);
+
     }
 }

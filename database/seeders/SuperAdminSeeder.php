@@ -2,12 +2,13 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
+namespace Database\Seeders;
+
 use Illuminate\Database\Seeder;
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
-
-
 
 class SuperAdminSeeder extends Seeder
 {
@@ -16,11 +17,20 @@ class SuperAdminSeeder extends Seeder
      */
     public function run(): void
     {
-        User::create([
+        // Öncelikle 'superadmin' rolünü alıyoruz
+        $role = Role::firstOrCreate(['name' => 'superadmin']);
+
+        // Kullanıcıyı oluşturuyoruz
+        $user = User::create([
             'name' => 'admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('admin123'), // Güçlü bir şifre kullanmayı unutmayın
-            'role' => 'superadmin',
         ]);
+
+        // Kullanıcıya 'superadmin' rolünü atıyoruz
+        $user->assignRole('superadmin'); // 'superadmin' rolünü atanıyor
+
+        // Seeder başarıyla tamamlandı mesajı
+        $this->command->info('Superadmin kullanıcısı oluşturuldu ve rol atandı.');
     }
 }
